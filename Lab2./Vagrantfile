@@ -1,0 +1,19 @@
+Vagrant.configure("2") do |config|
+
+  def create_vm(config, box_name, ip_address)
+    config.vm.define box_name do |node|
+      node.vm.box = "generic/#{box_name}"
+      node.vm.hostname = box_name # Set hostname to match box name
+      node.vm.network "private_network", ip: ip_address
+      node.vm.provider "virtualbox" do |vb|
+        vb.memory = 2048 
+        vb.cpus = 2     
+      end
+    end
+  end
+
+  create_vm(config, "ubuntu2204", "192.168.57.100")
+  create_vm(config, "rocky9", "192.168.57.101")
+  create_vm(config, "fedora33", "192.168.57.102")
+
+end
