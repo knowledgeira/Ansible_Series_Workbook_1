@@ -1,2 +1,4 @@
 # Ansible_Series_Workbook_1
-For my ansible workbook
+
+
+This workbook is for absolute ansible begineer created by Manoj Jagdale.
