@@ -1,0 +1,39 @@
+Vagrant.configure("2") do |config|
+  
+  config.ssh.insert_key = false
+
+  def create_vm(config, box_name, ip_address, hostname, vagrant_name)
+    config.vm.define vagrant_name do |node|
+      node.vm.box = "generic/#{box_name}"
+      node.vm.hostname = hostname
+      node.vm.network "private_network", ip: ip_address
+      node.vm.provider "virtualbox" do |vb|
+        vb.memory = 1024
+        vb.cpus = 1
+      end
+      node.vm.provision "shell", inline: <<-SHELL
+        sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+        sudo systemctl restart sshd
+      SHELL
+    end
+  end
+  
+  ubuntu_box, fedora_box, controller_hostname, target1_hostname, target2_hostname = "ubuntu2204", "fedora33", "Controller", "Production-Server1", "Production-Server2"
+  create_vm(config, ubuntu_box, "192.168.57.100", controller_hostname, "JumpHost-Controller")
+  create_vm(config, ubuntu_box, "192.168.57.101", target1_hostname, "TargetHost1")
+  create_vm(config, fedora_box, "192.168.57.102", target2_hostname, "TargetHost2")
+
+  # After all VMs are defined and provisioned, set up passwordless SSH from JumpHost-Controller to TargetHost1 and TargetHost2.
+  config.vm.provision "shell", privileged: false, run: 'always', inline: <<-SHELL
+    # Check if SSH keys exist on JumpHost-Controller, if not, generate them
+    if [ ! -f /home/vagrant/.ssh/id_rsa ]; then
+      ssh-keygen -t rsa -N "" -f /home/vagrant/.ssh/id_rsa
+    fi
+    
+    # Copy the public key to TargetHost1 and TargetHost2
+    ssh-keyscan 192.168.57.101 192.168.57.102 >> /home/vagrant/.ssh/known_hosts
+    sshpass -p 'vagrant' ssh-copy-id vagrant@192.168.57.101
+    sshpass -p 'vagrant' ssh-copy-id vagrant@192.168.57.102
+  SHELL
+
+end
